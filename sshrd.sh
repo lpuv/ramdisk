@@ -48,9 +48,9 @@ else
     done
 fi
 
-check=$("$oscheck"/irecovery -q | grep CPID | sed 's/CPID: //')
-replace=$("$oscheck"/irecovery -q | grep MODEL | sed 's/MODEL: //')
-deviceid=$("$oscheck"/irecovery -q | grep PRODUCT | sed 's/PRODUCT: //')
+check=$(sudo irecovery -q | grep CPID | sed 's/CPID: //')
+replace=$(sudo irecovery -q | grep MODEL | sed 's/MODEL: //')
+deviceid=$(sudo irecovery -q | grep PRODUCT | sed 's/PRODUCT: //')
 
 if [ -e work ]; then
     rm -rf work
@@ -66,37 +66,37 @@ if [ "$1" = 'boot' ]; then
         exit
     fi
 
-    "$oscheck"/gaster pwn
+    sudo "$oscheck"/gaster pwn
     sleep 1
-    "$oscheck"/gaster reset
+    sudo "$oscheck"/gaster reset
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/iBSS.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/iBSS.img4
     sleep 2
-    "$oscheck"/irecovery -f sshramdisk/iBEC.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/iBEC.img4
     if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
         sleep 1
-        "$oscheck"/irecovery -c go
+        sudo "$oscheck"/irecovery -c go
     fi
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/bootlogo.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/bootlogo.img4
     sleep 1
-    "$oscheck"/irecovery -c "setpicture 0x1"
+    sudo "$oscheck"/irecovery -c "setpicture 0x1"
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/ramdisk.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/ramdisk.img4
     sleep 1
-    "$oscheck"/irecovery -c ramdisk
+    sudo "$oscheck"/irecovery -c ramdisk
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/devicetree.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/devicetree.img4
     sleep 1
-    "$oscheck"/irecovery -c devicetree
+    sudo "$oscheck"/irecovery -c devicetree
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/trustcache.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/trustcache.img4
     sleep 1
-    "$oscheck"/irecovery -c firmware
+    sudo "$oscheck"/irecovery -c firmware
     sleep 1
-    "$oscheck"/irecovery -f sshramdisk/kernelcache.img4
+    sudo "$oscheck"/irecovery -f sshramdisk/kernelcache.img4
     sleep 1
-    "$oscheck"/irecovery -c bootx
+    sudo "$oscheck"/irecovery -c bootx
 
     exit
 fi
@@ -131,40 +131,40 @@ else
     ipswurl=$(curl -sL https://api.appledb.dev/ios/$device_os\;$buildid.json | "$oscheck"/jq -r .devices\[\"$deviceid\"\].ipsw)
 fi
 
-"$oscheck"/gaster pwn
+sudo "$oscheck"/gaster pwn
 "$oscheck"/img4tool -e -s shsh/"${check}".shsh -m work/IM4M
 
 cd work
-../"$oscheck"/pzb -g BuildManifest.plist "$ipswurl"
-../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
-../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
-../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
+nix-alien ../"$oscheck"/pzb -g BuildManifest.plist "$ipswurl"
+nix-alien ../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
+nix-alien ../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
+nix-alien ../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
 
 if [ "$oscheck" = 'Darwin' ]; then
-    ../"$oscheck"/pzb -g Firmware/"$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)".trustcache "$ipswurl"
+    nix-alien ../"$oscheck"/pzb -g Firmware/"$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)".trustcache "$ipswurl"
 else
-    ../"$oscheck"/pzb -g Firmware/"$(../Linux/PlistBuddy BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')".trustcache "$ipswurl"
+    nix-alien ../"$oscheck"/pzb -g Firmware/"$(nix-alien ../Linux/PlistBuddy BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')".trustcache "$ipswurl"
 fi
 
-../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
+nix-alien ../"$oscheck"/pzb -g "$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" "$ipswurl"
 
 if [ "$oscheck" = 'Darwin' ]; then
-    ../"$oscheck"/pzb -g "$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)" "$ipswurl"
+    nix-alien ../"$oscheck"/pzb -g "$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)" "$ipswurl"
 else
-    ../"$oscheck"/pzb -g "$(../Linux/PlistBuddy BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')" "$ipswurl"
+    nix-alien ../"$oscheck"/pzb -g "$(nix-alien ../Linux/PlistBuddy BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')" "$ipswurl"
 fi
 
 cd ..
-"$oscheck"/gaster decrypt work/"$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]dfu[/]//')" work/iBSS.dec
-"$oscheck"/gaster decrypt work/"$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]dfu[/]//')" work/iBEC.dec
-"$oscheck"/iBoot64Patcher work/iBSS.dec work/iBSS.patched
+sudo "$oscheck"/gaster decrypt work/"$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]dfu[/]//')" work/iBSS.dec
+sudo "$oscheck"/gaster decrypt work/"$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]dfu[/]//')" work/iBEC.dec
+nix-alien "$oscheck"/iBoot64Patcher work/iBSS.dec work/iBSS.patched
 "$oscheck"/img4 -i work/iBSS.patched -o sshramdisk/iBSS.img4 -M work/IM4M -A -T ibss
-"$oscheck"/iBoot64Patcher work/iBEC.dec work/iBEC.patched -b "rd=md0 debug=0x2014e wdt=-1 serial=3 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
+nix-alien "$oscheck"/iBoot64Patcher work/iBEC.dec work/iBEC.patched -b "rd=md0 debug=0x2014e wdt=-1 serial=3 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
 "$oscheck"/img4 -i work/iBEC.patched -o sshramdisk/iBEC.img4 -M work/IM4M -A -T ibec
 
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" -o work/kcache.raw
-"$oscheck"/Kernel64Patcher work/kcache.raw work/kcache.patched -a
-"$oscheck"/kerneldiff work/kcache.raw work/kcache.patched work/kc.bpatch
+nix-alien "$oscheck"/Kernel64Patcher work/kcache.raw work/kcache.patched -a
+nix-alien "$oscheck"/kerneldiff work/kcache.raw work/kcache.patched work/kc.bpatch
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" -o sshramdisk/kernelcache.img4 -M work/IM4M -T rkrn -P work/kc.bpatch `if [ "$oscheck" = 'Linux' ]; then echo "-J"; fi`
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]all_flash[/]//')" -o sshramdisk/devicetree.img4 -M work/IM4M -T rdtr
 
@@ -172,8 +172,8 @@ if [ "$oscheck" = 'Darwin' ]; then
     "$oscheck"/img4 -i work/"$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)".trustcache -o sshramdisk/trustcache.img4 -M work/IM4M -T rtsc
     "$oscheck"/img4 -i work/"$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)" -o work/ramdisk.dmg
 else
-    "$oscheck"/img4 -i work/"$(Linux/PlistBuddy work/BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')".trustcache -o sshramdisk/trustcache.img4 -M work/IM4M -T rtsc
-    "$oscheck"/img4 -i work/"$(Linux/PlistBuddy work/BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')" -o work/ramdisk.dmg
+    "$oscheck"/img4 -i work/"$(nix-alien Linux/PlistBuddy work/BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')".trustcache -o sshramdisk/trustcache.img4 -M work/IM4M -T rtsc
+    "$oscheck"/img4 -i work/"$(nix-alien Linux/PlistBuddy work/BuildManifest.plist -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" | sed 's/"//g')" -o work/ramdisk.dmg
 fi
 
 if [ "$oscheck" = 'Darwin' ]; then
@@ -199,8 +199,8 @@ else
         gzip -d other/ramdisk.tar.gz
     fi
 
-    "$oscheck"/hfsplus work/ramdisk.dmg grow 300000000 > /dev/null
-    "$oscheck"/hfsplus work/ramdisk.dmg untar other/ramdisk.tar > /dev/null
+    nix-alien "$oscheck"/hfsplus work/ramdisk.dmg grow 300000000 > /dev/null
+    nix-alien "$oscheck"/hfsplus work/ramdisk.dmg untar other/ramdisk.tar > /dev/null
 
     #if [ ! "$2" = 'rootless' ]; then
     #    curl -LO https://nightly.link/elihwyma/Pogo/workflows/build/root/Pogo.zip
