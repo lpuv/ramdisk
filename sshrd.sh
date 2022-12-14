@@ -164,7 +164,7 @@ nix-alien "$oscheck"/iBoot64Patcher work/iBEC.dec work/iBEC.patched -b "rd=md0 d
 
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" -o work/kcache.raw
 nix-alien "$oscheck"/Kernel64Patcher work/kcache.raw work/kcache.patched -a
-nix-alien "$oscheck"/kerneldiff work/kcache.raw work/kcache.patched work/kc.bpatch
+"$oscheck"/kerneldiff work/kcache.raw work/kcache.patched work/kc.bpatch
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)" -o sshramdisk/kernelcache.img4 -M work/IM4M -T rkrn -P work/kc.bpatch `if [ "$oscheck" = 'Linux' ]; then echo "-J"; fi`
 "$oscheck"/img4 -i work/"$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" work/BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]all_flash[/]//')" -o sshramdisk/devicetree.img4 -M work/IM4M -T rdtr
 
